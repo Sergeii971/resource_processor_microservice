@@ -8,11 +8,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.ResourceAccessException;
 
-import java.net.ConnectException;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -26,29 +26,42 @@ public class Consumer {
 
     private final MetadataUtil metadataUtil;
 
-    private final TopicName topicName;
+
+    private final MicroserviceUtil microserviceUtil;
+
 
     @Autowired
-    public Consumer(ObjectMapper objectMapper, MetadataUtil metadataUtil, TopicName topicName) {
+    public Consumer(ObjectMapper objectMapper, MetadataUtil metadataUtil, MicroserviceUtil microserviceUtil) {
         this.objectMapper = objectMapper;
         this.metadataUtil = metadataUtil;
-        this.topicName = topicName;
+        this.microserviceUtil = microserviceUtil;
     }
 
     @KafkaListener(topics = uploadingTopic)
-    @Retryable(value = ConnectException.class, backoff = @Backoff(value = 30000L))
+    @Retryable(value = {RuntimeException.class},
+            backoff = @Backoff(value = 3000L),
+            maxAttempts = 5)
     public void consumeIdOfUploadingFile(String message) {
         try {
             Long resourceId = objectMapper.readValue(message, Long.class);
-            RestTemplate restTemplate = new RestTemplate();
-            byte[] data = restTemplate.getForObject(Constant.GET_MP3_FILE_URL + resourceId, byte[].class);
+            byte[] data = microserviceUtil.getObject(Constant.GET_MP3_FILE_URL + resourceId, byte[].class);
             log.info("message consumed resourceId :" + resourceId);
             SongMetadataDto songMetadataDto = metadataUtil.createMetadata(Objects.requireNonNull(data), resourceId);
-            songMetadataDto = restTemplate.postForObject(Constant.POST_SONG_METADATA, songMetadataDto, SongMetadataDto.class);
+            songMetadataDto = microserviceUtil.postObject(Constant.POST_SONG_METADATA, songMetadataDto, SongMetadataDto.class);
             Optional.ofNullable(songMetadataDto)
                     .ifPresent(song -> log.info("song service add metadata of file with id: " + song.getId()));
         } catch (JsonProcessingException e) {
             throw new KafkaProducingException(e.getMessage());
         }
+    }
+
+    @Recover
+    public void consumeIdOfUploadingFile(RuntimeException e) {
+        log.error("internal server error", e);
+    }
+
+    @Recover
+    public void consumeIdOfUploadingFile(ResourceAccessException e) {
+        log.error(e.getMessage());
     }
 }
