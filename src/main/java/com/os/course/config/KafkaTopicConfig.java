@@ -1,6 +1,6 @@
 package com.os.course.config;
 
-import com.os.course.util.TopicName;
+import com.os.course.util.MicroserviceProperties;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.springframework.context.annotation.Bean;
@@ -11,7 +11,6 @@ import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.retry.annotation.Backoff;
 
 import java.net.ConnectException;
-import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,11 +18,11 @@ import java.util.Map;
 public class KafkaTopicConfig {
 
     private final KafkaProperties kafkaProperties;
-    private final TopicName topicName;
+    private final MicroserviceProperties microserviceProperties;
 
-    public KafkaTopicConfig(KafkaProperties kafkaProperties, TopicName topicName) {
+    public KafkaTopicConfig(KafkaProperties kafkaProperties, MicroserviceProperties topicName) {
         this.kafkaProperties = kafkaProperties;
-        this.topicName = topicName;
+        this.microserviceProperties = topicName;
     }
 
     @Bean
@@ -38,7 +37,7 @@ public class KafkaTopicConfig {
             attempts = "5",
             include = ConnectException.class, exclude = NullPointerException.class)
     public NewTopic uploadingMp3() {
-        return TopicBuilder.name(topicName.getUploadingTopicName())
+        return TopicBuilder.name(microserviceProperties.getUploadingTopicName())
                 .partitions(1)
                 .compact()
                 .build();

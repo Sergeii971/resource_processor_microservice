@@ -16,11 +16,14 @@ public class ContractController {
     @Autowired
     private MicroserviceUtil microserviceUtil;
 
+    @Autowired
+    private MicroserviceProperties microserviceProperties;
+
     @RequestMapping(method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(value = HttpStatus.CREATED)
     public SongMetadataDto save(@RequestBody SongMetadataDto songMetadataDto) {
-        return microserviceUtil.postObject(Constant.POST_SONG_METADATA, songMetadataDto, SongMetadataDto.class);
+        return microserviceUtil.postObject(microserviceProperties.getSongServiceUrl(), songMetadataDto, SongMetadataDto.class);
     }
 }

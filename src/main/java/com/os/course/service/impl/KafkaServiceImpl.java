@@ -2,7 +2,7 @@ package com.os.course.service.impl;
 
 import com.os.course.service.KafkaService;
 import com.os.course.util.Producer;
-import com.os.course.util.TopicName;
+import com.os.course.util.MicroserviceProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -11,15 +11,15 @@ import org.springframework.web.multipart.MultipartFile;
 @Slf4j
 public class KafkaServiceImpl implements KafkaService {
     private final Producer producer;
-    private final TopicName topicName;
+    private final MicroserviceProperties microserviceProperties;
 
-    public KafkaServiceImpl(Producer producer, TopicName topicName) {
+    public KafkaServiceImpl(Producer producer, MicroserviceProperties microserviceProperties) {
         this.producer = producer;
-        this.topicName = topicName;
+        this.microserviceProperties = microserviceProperties;
     }
 
     @Override
     public void sendFile(MultipartFile multipartFile) {
-        producer.sendMessage(multipartFile, topicName.getUploadingTopicName());
+        producer.sendMessage(multipartFile, microserviceProperties.getUploadingTopicName());
     }
 }

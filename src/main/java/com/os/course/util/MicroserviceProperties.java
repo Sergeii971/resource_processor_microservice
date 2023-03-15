@@ -8,7 +8,12 @@ import org.springframework.stereotype.Component;
 @Getter
 @Setter
 @Component
-public class TopicName {
+public class MicroserviceProperties {
     @Value("${topic.uploadingMp3.name}")
     private  String uploadingTopicName;
+
+    @Value("${resource_service.url}")
+    private String resourceServiceUrl;
+    @Value("${song_service.url}")
+    private String songServiceUrl;
 }

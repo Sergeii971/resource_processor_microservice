@@ -29,12 +29,15 @@ public class Consumer {
 
     private final MicroserviceUtil microserviceUtil;
 
+    private final MicroserviceProperties microserviceProperties;
+
 
     @Autowired
-    public Consumer(ObjectMapper objectMapper, MetadataUtil metadataUtil, MicroserviceUtil microserviceUtil) {
+    public Consumer(ObjectMapper objectMapper, MetadataUtil metadataUtil, MicroserviceUtil microserviceUtil, MicroserviceProperties microserviceProperties) {
         this.objectMapper = objectMapper;
         this.metadataUtil = metadataUtil;
         this.microserviceUtil = microserviceUtil;
+        this.microserviceProperties = microserviceProperties;
     }
 
     @KafkaListener(topics = uploadingTopic)
@@ -44,10 +47,10 @@ public class Consumer {
     public void consumeIdOfUploadingFile(String message) {
         try {
             Long resourceId = objectMapper.readValue(message, Long.class);
-            byte[] data = microserviceUtil.getObject(Constant.GET_MP3_FILE_URL + resourceId, byte[].class);
+            byte[] data = microserviceUtil.getObject(microserviceProperties.getResourceServiceUrl() + resourceId, byte[].class);
             log.info("message consumed resourceId :" + resourceId);
             SongMetadataDto songMetadataDto = metadataUtil.createMetadata(Objects.requireNonNull(data), resourceId);
-            songMetadataDto = microserviceUtil.postObject(Constant.POST_SONG_METADATA, songMetadataDto, SongMetadataDto.class);
+            songMetadataDto = microserviceUtil.postObject(microserviceProperties.getSongServiceUrl(), songMetadataDto, SongMetadataDto.class);
             Optional.ofNullable(songMetadataDto)
                     .ifPresent(song -> log.info("song service add metadata of file with id: " + song.getId()));
         } catch (JsonProcessingException e) {
