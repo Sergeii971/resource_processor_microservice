@@ -47,10 +47,10 @@ public class Consumer {
     public void consumeIdOfUploadingFile(String message) {
         try {
             Long resourceId = objectMapper.readValue(message, Long.class);
-            byte[] data = microserviceUtil.getObject(microserviceProperties.getResourceServiceUrl() + resourceId, byte[].class);
+            byte[] data = microserviceUtil.getObject(microserviceProperties.getUrl() + microserviceProperties.getResourceServiceUrl() + resourceId, byte[].class);
             log.info("message consumed resourceId :" + resourceId);
             SongMetadataDto songMetadataDto = metadataUtil.createMetadata(Objects.requireNonNull(data), resourceId);
-            songMetadataDto = microserviceUtil.postObject(microserviceProperties.getSongServiceUrl(), songMetadataDto, SongMetadataDto.class);
+            songMetadataDto = microserviceUtil.postObject(microserviceProperties.getUrl() + microserviceProperties.getSongServiceUrl(), songMetadataDto, SongMetadataDto.class);
             Optional.ofNullable(songMetadataDto)
                     .ifPresent(song -> log.info("song service add metadata of file with id: " + song.getId()));
         } catch (JsonProcessingException e) {
