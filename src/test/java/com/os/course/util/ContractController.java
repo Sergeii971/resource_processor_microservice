@@ -24,6 +24,6 @@ public class ContractController {
             produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(value = HttpStatus.CREATED)
     public SongMetadataDto save(@RequestBody SongMetadataDto songMetadataDto) {
-        return microserviceUtil.postObject(microserviceProperties.getSongServiceUrl(), songMetadataDto, SongMetadataDto.class);
+        return microserviceUtil.postObject("http://localhost:8082" + microserviceProperties.getSongServiceUrl(), songMetadataDto, SongMetadataDto.class);
     }
 }
