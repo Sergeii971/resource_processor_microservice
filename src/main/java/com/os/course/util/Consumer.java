@@ -21,6 +21,7 @@ import java.util.Optional;
 public class Consumer {
 
     private static final String uploadingTopic = "uploadingMp3";
+    private final String s3StorageUpdatingTopic = "s3StorageUpdatingTopic";
 
     private final ObjectMapper objectMapper;
 
@@ -31,13 +32,17 @@ public class Consumer {
 
     private final MicroserviceProperties microserviceProperties;
 
+    private final Producer producer;
+
 
     @Autowired
-    public Consumer(ObjectMapper objectMapper, MetadataUtil metadataUtil, MicroserviceUtil microserviceUtil, MicroserviceProperties microserviceProperties) {
+    public Consumer(ObjectMapper objectMapper, MetadataUtil metadataUtil, MicroserviceUtil microserviceUtil,
+                    MicroserviceProperties microserviceProperties, Producer producer) {
         this.objectMapper = objectMapper;
         this.metadataUtil = metadataUtil;
         this.microserviceUtil = microserviceUtil;
         this.microserviceProperties = microserviceProperties;
+        this.producer = producer;
     }
 
     @KafkaListener(topics = uploadingTopic)
@@ -47,12 +52,15 @@ public class Consumer {
     public void consumeIdOfUploadingFile(String message) {
         try {
             Long resourceId = objectMapper.readValue(message, Long.class);
-            byte[] data = microserviceUtil.getObject(microserviceProperties.getUrl() + microserviceProperties.getResourceServiceUrl() + resourceId, byte[].class);
+            byte[] data = microserviceUtil.getObject(microserviceProperties.getUrl()
+                    + microserviceProperties.getResourceServiceUrl() + resourceId, byte[].class);
             log.info("message consumed resourceId :" + resourceId);
             SongMetadataDto songMetadataDto = metadataUtil.createMetadata(Objects.requireNonNull(data), resourceId);
-            songMetadataDto = microserviceUtil.postObject(microserviceProperties.getUrl() + microserviceProperties.getSongServiceUrl(), songMetadataDto, SongMetadataDto.class);
+            songMetadataDto = microserviceUtil.postObject(microserviceProperties.getUrl()
+                    + microserviceProperties.getSongServiceUrl(), songMetadataDto, SongMetadataDto.class);
             Optional.ofNullable(songMetadataDto)
                     .ifPresent(song -> log.info("song service add metadata of file with id: " + song.getId()));
+            producer.sendMessage(resourceId, s3StorageUpdatingTopic);
         } catch (JsonProcessingException e) {
             throw new KafkaProducingException(e.getMessage());
         }

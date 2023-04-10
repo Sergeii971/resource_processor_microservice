@@ -2,6 +2,7 @@ package com.os.course.util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.os.course.model.exception.KafkaProducingException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -20,13 +21,13 @@ public class Producer {
     }
 
     public <T> void sendMessage(T t, String topicName) {
-        String objectAsMessage = null;
         try {
-            objectAsMessage = objectMapper.writeValueAsString(t);
-            kafkaTemplate.send(topicName, objectAsMessage);
+            String objectAsMessage = objectMapper.writeValueAsString(t);
+
+            kafkaTemplate.send(topicName,  objectAsMessage);
             log.info("message produced {}", objectAsMessage);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e.getMessage());
+            throw new KafkaProducingException(e.getMessage());
         }
     }
 }
