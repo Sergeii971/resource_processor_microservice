@@ -1,6 +1,9 @@
 package com.os.course.util;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
@@ -17,6 +20,11 @@ public class MicroserviceUtil {
 
     public <T> T getObject(String url, Class<T> responseType) {
         return restTemplate.getForObject(url, responseType);
+    }
+
+    public <T> T getObject(String url, Class<T> responseType, HttpHeaders headers) {
+        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+        return restTemplate.exchange(url, HttpMethod.GET, requestEntity, responseType).getBody();
     }
 
     @Recover

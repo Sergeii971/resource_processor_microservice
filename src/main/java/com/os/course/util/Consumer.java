@@ -6,6 +6,7 @@ import com.os.course.model.dto.SongMetadataDto;
 import com.os.course.model.exception.KafkaProducingException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
@@ -13,6 +14,8 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -51,16 +54,20 @@ public class Consumer {
             maxAttempts = 5)
     public void consumeIdOfUploadingFile(String message) {
         try {
-            Long resourceId = objectMapper.readValue(message, Long.class);
+            List<String> param = Arrays.asList(objectMapper.readValue(message, String[].class));
+            long resourceId = Long.parseLong(param.get(0));
+            String token = param.get(1);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", token);
             byte[] data = microserviceUtil.getObject(microserviceProperties.getUrl()
-                    + microserviceProperties.getResourceServiceUrl() + resourceId, byte[].class);
+                    + microserviceProperties.getResourceServiceUrl() + resourceId, byte[].class, headers);
             log.info("message consumed resourceId :" + resourceId);
             SongMetadataDto songMetadataDto = metadataUtil.createMetadata(Objects.requireNonNull(data), resourceId);
             songMetadataDto = microserviceUtil.postObject(microserviceProperties.getUrl()
                     + microserviceProperties.getSongServiceUrl(), songMetadataDto, SongMetadataDto.class);
             Optional.ofNullable(songMetadataDto)
                     .ifPresent(song -> log.info("song service add metadata of file with id: " + song.getId()));
-            producer.sendMessage(resourceId, s3StorageUpdatingTopic);
+            producer.sendMessage(param, s3StorageUpdatingTopic);
         } catch (JsonProcessingException e) {
             throw new KafkaProducingException(e.getMessage());
         }
